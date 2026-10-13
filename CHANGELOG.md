@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3
+
+- Rebuild candidate dependency locks when local dependency settings change.
+- Keep old lockfiles out of source patch replay.
+
 ## 0.3.2
 
 - Migrate committed local installation changes before building the candidate.

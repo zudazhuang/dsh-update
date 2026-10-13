@@ -6,10 +6,10 @@ DeepSeek Harness 源码安装的官方版本检查和安全更新插件。适配
 
 社区插件，非 DeepSeek 官方产品。支持 Harness 源码 Web 安装；当前在 0.2.1-alpha.1 验证，适配 ConfigForms 设置接口。需要 Node.js ^22.19 或 >=24、pnpm、Git；Mac 登录自动启动还需 Python 3。
 
-从 [Releases](https://github.com/zudazhuang/dsh-upgrade/releases) 下载版本固定的 `dsh-upgrade-0.3.1.tgz`，在 Harness 源码目录运行：
+从 [Releases](https://github.com/zudazhuang/dsh-upgrade/releases) 下载版本固定的 `dsh-upgrade-0.3.3.tgz`，在 Harness 源码目录运行：
 
 ```sh
-pnpm dsh plugin --profile web add /absolute/path/dsh-upgrade-0.3.1.tgz
+pnpm dsh plugin --profile web add /absolute/path/dsh-upgrade-0.3.3.tgz
 ```
 
 开发者也可克隆本仓库，运行 `npm ci`、`npm test`、`npm pack` 后安装生成的包。插件 → dsh-upgrade 提供检查、隔离构建、切换操作和检查间隔、渠道、空闲时长、自动切换配置。自动切换默认关闭；未使用监督启动或源码存在未提交修改时，自动安装暂停；页面允许保存自动安装偏好，满足条件后只在指定时段执行。
@@ -59,3 +59,5 @@ DSH_SOURCE=/path/to/deepseek-harness ./start-harness.sh
 仓库添加 `dsh-plugin`、`deepseek-harness` 和 `dsh` topics；GitHub 主题页按标签收录，索引可能延迟。版本固定的安装包发布在 GitHub Releases。npm 发布尚待完成账号登录；当前通过 GitHub Release 安装。GitHub topic 收录也不代表官方审核或兼容性认证。
 
 已提交的本地源码修改会从当前官方版本标签生成私有补丁，并在独立候选目录中三方迁移。存在冲突时停止更新，原环境不变；需先人工解决冲突。未提交的修改仍阻止更新，避免迁移期间内容变化。不要将私人安装提交推送到公共仓库。
+
+本地依赖调整通过 package.json、pnpm-workspace.yaml 和 .npmrc 迁移；不套用旧 pnpm-lock.yaml。存在这些调整时，候选目录重新解析依赖并提交生成的锁文件，再构建验证。源码三方合并冲突仍停止更新。项目目录名不变；候选构建保存在更新存储目录内，监督进程负责切换实际运行版本。

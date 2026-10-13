@@ -115,15 +115,19 @@ export async function smoke(source, home, timeoutMs, signal) {
  * @param {string} version Previous official version.
  * @param {string} patch Private patch file.
  * @param {Function} run Command runner.
+ * @returns {Promise<boolean>} Whether local changes require dependency resolution.
  */
 export async function migrateLocalChanges(source, staged, version, patch, run = command) {
   await writeFile(patch, '', { mode: 0o600 })
-  await run('git', ['diff', '--binary', `--output=${patch}`, `dsh-v${version}`, 'HEAD'], { cwd: source })
-  if (!(await readFile(patch)).length) return
+  await run('git', ['diff', '--binary', `--output=${patch}`, `dsh-v${version}`, 'HEAD', '--', '.', ':(exclude)pnpm-lock.yaml'], { cwd: source })
+  if (!(await readFile(patch)).length) return false
+  const names = await run('git', ['diff', '--name-only', `dsh-v${version}`, 'HEAD'], { cwd: source })
+  const dependencyChanges = names.split('\n').some(name => /(^|\/)(package\.json|pnpm-workspace\.yaml|\.npmrc)$/.test(name))
   await run('git', ['fetch', '--no-tags', source, `refs/tags/dsh-v${version}:refs/tags/dsh-v${version}`], { cwd: staged })
   await run('git', ['apply', '--3way', '--check', patch], { cwd: staged })
   await run('git', ['apply', '--3way', patch], { cwd: staged })
   await run('git', ['-c', 'user.name=DSH local migration', '-c', 'user.email=local@localhost', 'commit', '-m', 'Preserve local installation changes'], { cwd: staged })
+  return dependencyChanges
 }
 /** Build and smoke-test an official tag in isolation, retaining the current environment. */
 export async function prepare({ source, home, root, target, signal, publish, run = command, verify = smoke }) {
@@ -141,10 +145,11 @@ export async function prepare({ source, home, root, target, signal, publish, run
     const staged = join(directory, 'source')
     const pkg = await readJson(join(staged, 'apps/cli/package.json'))
     if (pkg.version !== target.version) throw new Error('Tagged source version differs from release metadata')
-    await migrateLocalChanges(source, staged, current.version, join(directory, 'local-changes.patch'), run)
+    const dependencyChanges = await migrateLocalChanges(source, staged, current.version, join(directory, 'local-changes.patch'), run)
     if ((await readJson(join(staged, 'apps/cli/package.json'))).version !== target.version) throw new Error('Local changes altered the candidate version')
     await publish({ phase: 'build', target: target.version })
-    await run('pnpm', ['install', '--frozen-lockfile'], { cwd: staged, signal })
+    await run('pnpm', ['install', dependencyChanges ? '--no-frozen-lockfile' : '--frozen-lockfile'], { cwd: staged, signal })
+    if (dependencyChanges) await run('git', ['-c', 'user.name=DSH local migration', '-c', 'user.email=local@localhost', 'commit', '--allow-empty', '-am', 'Resolve migrated dependency lockfile'], { cwd: staged })
     await run('pnpm', ['run', 'build'], { cwd: staged, signal })
     await cp(home, smokeHome, { recursive: true, dereference: false, filter: path => !['backups', 'cache'].includes(path.slice(resolve(home).length + 1).split('/')[0]) })
     const profile = await readJson(join(smokeHome, 'profiles/web/package.json'))
