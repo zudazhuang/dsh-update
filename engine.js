@@ -1,7 +1,8 @@
 /** Official source release preparation. All writes stay in private staging directories. */
 import { spawn } from 'node:child_process'
-import { mkdir, readFile, writeFile, cp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, writeFile, cp, rm } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 import { randomUUID, createHash } from 'node:crypto'
 import { once } from 'node:events'
 import semver from 'semver'
@@ -59,9 +60,24 @@ export async function checkRelease(channel, signal) {
   const [releases, registry] = await Promise.all([fetchJson(RELEASES), fetchJson(REGISTRY)])
   return selectRelease(releases, registry, channel)
 }
+/** Snapshot tracked and non-ignored files without changing the user's index or branch.
+ * @param {string} source Installation directory.
+ * @param {Function} run Command runner.
+ * @returns {Promise<string>} Git tree identifier for the working files.
+ */
+export async function workingTree(source, run = command) {
+  const temp = await mkdtemp(join(tmpdir(), 'dsh-update-index-'))
+  const options = { cwd: source, env: { ...buildEnvironment(), GIT_INDEX_FILE: join(temp, 'index') } }
+  try {
+    await run('git', ['read-tree', 'HEAD'], options)
+    await run('git', ['add', '--all'], options)
+    return await run('git', ['write-tree'], options)
+  } finally { await rm(temp, { recursive: true, force: true }) }
+}
 /** Fingerprint deployment files to detect changes between preparation and switching. */
-export async function deploymentHash(home, source) {
+export async function deploymentHash(home, source, run = command) {
   const hash = createHash('sha256')
+  hash.update(await workingTree(source, run))
   for (const file of [join(home, 'cordis.patch.yml'), join(home, 'profiles/web/cordis.patch.yml'), join(home, 'profiles/web/package.json'), join(home, 'profiles/web/pnpm-lock.yaml'), join(home, 'profiles/web/pnpm-workspace.yaml'), join(home, 'profiles/web/.npmrc'), join(source, 'pnpm-workspace.yaml')]) {
     hash.update(file)
     try { hash.update(await readFile(file)) }
@@ -76,10 +92,9 @@ export async function sourceStatus(source, run = command) {
   const dirty = await run('git', ['status', '--porcelain'], { cwd: source, timeoutMs: 20000 })
   return { version: pkg.version, dirty: dirty.split('\n').filter(Boolean) }
 }
-/** Require a newer target and a clean source tree before staging or switching. */
+/** Require a newer target before staging or switching. Working files are snapshotted separately. */
 export function validatePlan(current, target) {
   if (!semver.gt(target.version, current.version)) throw new Error('Target must be newer than the running installation')
-  if (current.dirty.length) throw new Error('Local changes block updating; preserve and resolve them before retrying')
 }
 /** Start one supported dsh profile and wait for its complete authenticated Web boot. */
 export async function smoke(source, home, timeoutMs, signal) {
@@ -109,7 +124,7 @@ export async function smoke(source, home, timeoutMs, signal) {
     await closed
   }
 }
-/** Replay committed local changes over a new official tag; conflicts stop preparation.
+/** Replay working files over a new official tag; conflicts stop preparation.
  * @param {string} source Previous installation.
  * @param {string} staged Isolated candidate.
  * @param {string} version Previous official version.
@@ -118,13 +133,19 @@ export async function smoke(source, home, timeoutMs, signal) {
  * @returns {Promise<boolean>} Whether local changes require dependency resolution.
  */
 export async function migrateLocalChanges(source, staged, version, patch, run = command) {
+  const tree = await workingTree(source, run)
   await writeFile(patch, '', { mode: 0o600 })
-  await run('git', ['diff', '--binary', `--output=${patch}`, `dsh-v${version}`, 'HEAD', '--', '.', ':(exclude)pnpm-lock.yaml'], { cwd: source })
+  await run('git', ['diff', '--binary', `--output=${patch}`, `dsh-v${version}`, tree, '--', '.', ':(exclude)pnpm-lock.yaml'], { cwd: source })
   if (!(await readFile(patch)).length) return false
-  const names = await run('git', ['diff', '--name-only', `dsh-v${version}`, 'HEAD'], { cwd: source })
+  const names = await run('git', ['diff', '--name-only', `dsh-v${version}`, tree], { cwd: source })
   const dependencyChanges = names.split('\n').some(name => /(^|\/)(package\.json|pnpm-workspace\.yaml|\.npmrc)$/.test(name))
   await run('git', ['fetch', '--no-tags', source, `refs/tags/dsh-v${version}:refs/tags/dsh-v${version}`], { cwd: staged })
-  await run('git', ['apply', '--3way', '--check', patch], { cwd: staged })
+  try { await run('git', ['apply', '--3way', '--check', patch], { cwd: staged }) }
+  catch (error) {
+    await run('git', ['apply', '--3way', patch], { cwd: staged }).catch(applyError => { /* Conflict markers are inspected below in the isolated candidate. */ })
+    const conflicts = await run('git', ['diff', '--name-only', '--diff-filter=U'], { cwd: staged })
+    throw new Error(`Local migration conflict: ${conflicts || 'inspect the private candidate patch'}`)
+  }
   await run('git', ['apply', '--3way', patch], { cwd: staged })
   await run('git', ['-c', 'user.name=DSH local migration', '-c', 'user.email=local@localhost', 'commit', '-m', 'Preserve local installation changes'], { cwd: staged })
   return dependencyChanges
@@ -138,7 +159,7 @@ export async function prepare({ source, home, root, target, signal, publish, run
     const current = await sourceStatus(source, run)
     validatePlan(current, target)
     const previousCommit = await run('git', ['rev-parse', 'HEAD'], { cwd: source, timeoutMs: 20000 })
-    const beforeHash = await deploymentHash(home, source)
+    const beforeHash = await deploymentHash(home, source, run)
     await mkdir(directory, { recursive: true, mode: 0o700 })
     await publish({ phase: 'download', target: target.version })
     await run('git', ['clone', '--depth', '1', '--branch', target.tag, '--single-branch', OFFICIAL_REPO, join(directory, 'source')], { signal })
@@ -158,7 +179,7 @@ export async function prepare({ source, home, root, target, signal, publish, run
     }
     await publish({ phase: 'verify', target: target.version })
     await verify(staged, smokeHome, 90000, signal)
-    if (beforeHash !== await deploymentHash(home, source)) throw new Error('Configuration changed during preparation; prepare again')
+    if (beforeHash !== await deploymentHash(home, source, run)) throw new Error('Configuration changed during preparation; prepare again')
     const plan = { source: staged, previous: source, previousCommit, home, profile: join(smokeHome, 'profiles/web'), deploymentHash: beforeHash, target, preparedAt: Date.now() }
     await writeJson(join(root, 'prepared.json'), plan)
     await publish({ phase: 'prepared', target: target.version })

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.4
+
+- Snapshot and migrate uncommitted edits and non-ignored new files automatically.
+- Keep the original Git index and branch unchanged.
+- Invalidate prepared candidates when working files change.
+- Report conflicting source filenames instead of disabling updates for all local edits.
+
 ## 0.3.3
 
 - Rebuild candidate dependency locks when local dependency settings change.

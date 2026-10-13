@@ -6,13 +6,13 @@ DeepSeek Harness 源码安装的官方版本检查和安全更新插件。适配
 
 社区插件，非 DeepSeek 官方产品。支持 Harness 源码 Web 安装；当前在 0.2.1-alpha.1 验证，适配 ConfigForms 设置接口。需要 Node.js ^22.19 或 >=24、pnpm、Git；Mac 登录自动启动还需 Python 3。
 
-从 [Releases](https://github.com/zudazhuang/dsh-upgrade/releases) 下载版本固定的 `dsh-upgrade-0.3.3.tgz`，在 Harness 源码目录运行：
+从 [Releases](https://github.com/zudazhuang/dsh-upgrade/releases) 下载版本固定的 `dsh-upgrade-0.3.4.tgz`，在 Harness 源码目录运行：
 
 ```sh
-pnpm dsh plugin --profile web add /absolute/path/dsh-upgrade-0.3.3.tgz
+pnpm dsh plugin --profile web add /absolute/path/dsh-upgrade-0.3.4.tgz
 ```
 
-开发者也可克隆本仓库，运行 `npm ci`、`npm test`、`npm pack` 后安装生成的包。插件 → dsh-upgrade 提供检查、隔离构建、切换操作和检查间隔、渠道、空闲时长、自动切换配置。自动切换默认关闭；未使用监督启动或源码存在未提交修改时，自动安装暂停；页面允许保存自动安装偏好，满足条件后只在指定时段执行。
+开发者也可克隆本仓库，运行 `npm ci`、`npm test`、`npm pack` 后安装生成的包。插件 → dsh-upgrade 提供检查、隔离构建、切换操作和检查间隔、渠道、空闲时长、自动切换配置。自动切换默认关闭；未使用监督启动时，自动安装暂停；页面允许保存自动安装偏好，满足条件后只在指定时段执行。
 
 本机启动：
 
@@ -36,7 +36,7 @@ DSH_SOURCE=/path/to/deepseek-harness ./start-harness.sh
 
 本插件核对 npm 发布完整性元数据，源码传输依赖 Git HTTPS。它没有额外的发布签名验证。试启动检查的是 Host 激活与版本，前端第三方插件的全部业务行为仍需要更新后验证；本机安装后的前端通过实际浏览器验证。
 
-切换前重新核对源码 commit、部署文件和活动会话及任务。未提交文件阻止更新；本插件不会自动 stash、提交、推送或 reset 原目录。切换时所有已存在 Agent 的 maintenance 阶段被占用，新建 Agent 暂时拒绝；已有运行工作阻止切换。维护期内用户新输入可能排队，切换后请确认投递状态。
+切换前重新核对源码 commit、部署文件和活动会话及任务。未提交修改和未被 Git 忽略的新增文件自动生成私有快照并迁移；本插件不会自动 stash、提交、推送或 reset 原目录。切换时所有已存在 Agent 的 maintenance 阶段被占用，新建 Agent 暂时拒绝；已有运行工作阻止切换。维护期内用户新输入可能排队，切换后请确认投递状态。
 
 监督进程等待旧 Harness 完全退出，再复制整个用户数据目录，保留旧源码、node_modules 与构建文件，并替换 Web profile 的依赖环境。启动失败时先保存升级后的完整用户目录，再恢复一致性快照并启动原环境，避免旧程序读取较新的 Session 格式。更新后的数据副本位于用户目录旁的 `.dsh.failed-update-*`，不会静默删除。
 
@@ -58,6 +58,8 @@ DSH_SOURCE=/path/to/deepseek-harness ./start-harness.sh
 
 仓库添加 `dsh-plugin`、`deepseek-harness` 和 `dsh` topics；GitHub 主题页按标签收录，索引可能延迟。版本固定的安装包发布在 GitHub Releases。npm 发布尚待完成账号登录；当前通过 GitHub Release 安装。GitHub topic 收录也不代表官方审核或兼容性认证。
 
-已提交的本地源码修改会从当前官方版本标签生成私有补丁，并在独立候选目录中三方迁移。存在冲突时停止更新，原环境不变；需先人工解决冲突。未提交的修改仍阻止更新，避免迁移期间内容变化。不要将私人安装提交推送到公共仓库。
+本地工作文件会从当前官方版本标签生成私有补丁，并在独立候选目录中三方迁移。存在冲突时停止更新，原环境不变；需先人工解决冲突。准备结束及切换前重新核对全部工作文件，内容变化会使候选失效。不要将私人安装提交推送到公共仓库。
 
 本地依赖调整通过 package.json、pnpm-workspace.yaml 和 .npmrc 迁移；不套用旧 pnpm-lock.yaml。存在这些调整时，候选目录重新解析依赖并提交生成的锁文件，再构建验证。源码三方合并冲突仍停止更新。项目目录名不变；候选构建保存在更新存储目录内，监督进程负责切换实际运行版本。
+
+工作文件快照通过私有临时 Git 索引生成，保持用户原索引、分支与文件不变。Git 忽略的文件不迁移；用户数据和插件凭据通过 Harness 用户目录副本保留。无法三方合并的源码会显示冲突文件名并停止，原环境继续运行，不自动覆盖任何一方。

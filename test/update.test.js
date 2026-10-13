@@ -37,10 +37,10 @@ test('selects preview or stable versions from agreeing official sources', () => 
   assert.throws(() => selectRelease({}, registry, 'preview'), /Invalid/)
   assert.throws(() => selectRelease([release('0.2.0')], { versions: { '0.2.0': { ...packageRecord('0.2.0'), name: 'evil' } } }, 'preview'), /disagree/)
 })
-test('never stages equal versions, downgrades or dirty source trees', () => {
+test('never stages equal versions or downgrades; local edits may migrate', () => {
   assert.throws(() => validatePlan({ version: '0.3.0', dirty: [] }, target), /newer/)
   assert.throws(() => validatePlan({ version: '0.4.0', dirty: [] }, target), /newer/)
-  assert.throws(() => validatePlan({ version: '0.2.0', dirty: [' M file'] }, target), /Local changes/)
+  assert.doesNotThrow(() => validatePlan({ version: '0.2.0', dirty: [' M file'] }, target))
 })
 test('build subprocesses do not inherit credentials', () => {
   assert.deepEqual(buildEnvironment({ PATH: '/bin', DEEPSEEK_API_KEY: 'secret', TOKEN: 'secret', GIT_ASKPASS: 'credential-program', DSH_HOME: '/real' }), { PATH: '/bin' })
@@ -149,6 +149,8 @@ test('Host routes validate RPC input and refuse an unsupervised version switch',
   const { source } = await fixture(t)
   await writeJson(join(source, 'package.json'), { name: '@deepseek-ai/dsh-root' })
   await command('git', ['init'], { cwd: source })
+  await command('git', ['add', '.'], { cwd: source })
+  await command('git', ['-c', 'user.name=Test', '-c', 'user.email=test@localhost', 'commit', '-m', 'fixture'], { cwd: source })
   process.argv[1] = join(source, 'apps/cli/src/bin.ts')
   Object.assign(process.env, { DSH_HOME: home, DSH_SAFE_UPDATE_ROOT: root, DSH_SAFE_SMOKE: '1' }); delete process.env.DSH_SAFE_SUPERVISOR_ID
   const routes = new Map(); const cleanups = []

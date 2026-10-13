@@ -147,7 +147,7 @@ export async function apply(ctx, config) {
         }
         const transaction = await readJson(join(root, 'transaction.json'))
         const failed = await readJson(join(root, 'failed-version.json'))
-        if (scheduling().updateDue && ['available', 'prepared'].includes(state.phase) && !state.dirty.length && state.supervised && !activity(ctx)
+        if (scheduling().updateDue && ['available', 'prepared'].includes(state.phase) && state.supervised && !activity(ctx)
             && Date.now() - lastActivity >= config.idleQuietSeconds.get() * 1000 && transaction?.failedVersion !== state.latest.version && failed?.version !== state.latest.version) {
           if (state.phase !== 'prepared') await prepareRelease()
           if (scheduling().updateDue) await handoff()
