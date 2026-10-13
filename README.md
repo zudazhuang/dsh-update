@@ -57,3 +57,5 @@ DSH_SOURCE=/path/to/deepseek-harness ./start-harness.sh
 ## 社区发布
 
 仓库添加 `dsh-plugin`、`deepseek-harness` 和 `dsh` topics；GitHub 主题页按标签收录，索引可能延迟。版本固定的安装包发布在 GitHub Releases。npm 发布尚待完成账号登录；当前通过 GitHub Release 安装。GitHub topic 收录也不代表官方审核或兼容性认证。
+
+已提交的本地源码修改会从当前官方版本标签生成私有补丁，并在独立候选目录中三方迁移。存在冲突时停止更新，原环境不变；需先人工解决冲突。未提交的修改仍阻止更新，避免迁移期间内容变化。不要将私人安装提交推送到公共仓库。

@@ -109,13 +109,30 @@ export async function smoke(source, home, timeoutMs, signal) {
     await closed
   }
 }
+/** Replay committed local changes over a new official tag; conflicts stop preparation.
+ * @param {string} source Previous installation.
+ * @param {string} staged Isolated candidate.
+ * @param {string} version Previous official version.
+ * @param {string} patch Private patch file.
+ * @param {Function} run Command runner.
+ */
+export async function migrateLocalChanges(source, staged, version, patch, run = command) {
+  await writeFile(patch, '', { mode: 0o600 })
+  await run('git', ['diff', '--binary', `--output=${patch}`, `dsh-v${version}`, 'HEAD'], { cwd: source })
+  if (!(await readFile(patch)).length) return
+  await run('git', ['fetch', '--no-tags', source, `refs/tags/dsh-v${version}:refs/tags/dsh-v${version}`], { cwd: staged })
+  await run('git', ['apply', '--3way', '--check', patch], { cwd: staged })
+  await run('git', ['apply', '--3way', patch], { cwd: staged })
+  await run('git', ['-c', 'user.name=DSH local migration', '-c', 'user.email=local@localhost', 'commit', '-m', 'Preserve local installation changes'], { cwd: staged })
+}
 /** Build and smoke-test an official tag in isolation, retaining the current environment. */
 export async function prepare({ source, home, root, target, signal, publish, run = command, verify = smoke }) {
   const releaseLock = await acquireLock(root)
   const directory = join(root, 'versions', `${target.version}-${randomUUID()}`)
   const smokeHome = join(directory, '.smoke-home')
   try {
-    validatePlan(await sourceStatus(source, run), target)
+    const current = await sourceStatus(source, run)
+    validatePlan(current, target)
     const previousCommit = await run('git', ['rev-parse', 'HEAD'], { cwd: source, timeoutMs: 20000 })
     const beforeHash = await deploymentHash(home, source)
     await mkdir(directory, { recursive: true, mode: 0o700 })
@@ -124,6 +141,8 @@ export async function prepare({ source, home, root, target, signal, publish, run
     const staged = join(directory, 'source')
     const pkg = await readJson(join(staged, 'apps/cli/package.json'))
     if (pkg.version !== target.version) throw new Error('Tagged source version differs from release metadata')
+    await migrateLocalChanges(source, staged, current.version, join(directory, 'local-changes.patch'), run)
+    if ((await readJson(join(staged, 'apps/cli/package.json'))).version !== target.version) throw new Error('Local changes altered the candidate version')
     await publish({ phase: 'build', target: target.version })
     await run('pnpm', ['install', '--frozen-lockfile'], { cwd: staged, signal })
     await run('pnpm', ['run', 'build'], { cwd: staged, signal })

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- Migrate committed local installation changes before building the candidate.
+- Reject migration conflicts without modifying the running installation.
+
 ## 0.3.1
 
 - Rename the package and repository to `dsh-upgrade`; `dsh-update` is owned by another npm author.
