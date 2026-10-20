@@ -8,5 +8,6 @@
         updateWindowMinutes: 60
         checkIntervalMinutes: 30
         autoApply: false
+        downloadTimeoutSeconds: 3600
         idleQuietSeconds: 120
         channel: preview

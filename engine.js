@@ -51,15 +51,19 @@ export function selectRelease(releases, registry, channel) {
   return { ...release, integrity: pkg.dist.integrity }
 }
 /** Fetch both official authorities. Network errors invalidate the verdict. */
-export async function checkRelease(channel, signal) {
+export async function checkRelease(channel, signal, run = command) {
   const fetchJson = async url => {
-    const res = await fetch(url, { signal: AbortSignal.any([signal ?? new AbortController().signal, AbortSignal.timeout(20000)]), headers: { 'User-Agent': 'dsh-upgrade' }, redirect: 'error' })
-    if (!res.ok) throw new Error(`Official source returned HTTP ${res.status}`)
-    return res.json()
+    const directory = await mkdtemp(join(tmpdir(), 'dsh-release-metadata-'))
+    const file = join(directory, 'metadata.json')
+    try {
+      await run('curl', ['--compressed', '--fail', '--silent', '--show-error', '--proto', '=https', '--connect-timeout', '20', '--max-time', '60', '--retry', '2', '--retry-max-time', '180', '--output', file, url], { signal, timeoutMs: 190000 })
+      return JSON.parse(await readFile(file, 'utf8'))
+    } finally { await rm(directory, { recursive: true, force: true }) }
   }
   const [releases, registry] = await Promise.all([fetchJson(RELEASES), fetchJson(REGISTRY)])
   return selectRelease(releases, registry, channel)
 }
+
 /** Snapshot tracked and non-ignored files without changing the user's index or branch.
  * @param {string} source Installation directory.
  * @param {Function} run Command runner.
@@ -155,24 +159,42 @@ export async function migrateLocalChanges(source, staged, version, patch, run = 
  * @param {string} directory Private candidate directory.
  * @param {AbortSignal} signal Cancellation signal.
  * @param {Function} run Command runner.
+ * @param {number} downloadTimeoutSeconds Total subprocess budget, excluding termination grace.
+ * @param {string} cacheDirectory Optional private directory for verified complete archives.
  */
-export async function downloadSource(target, directory, signal, run = command) {
+export async function downloadSource(target, directory, signal, run = command, downloadTimeoutSeconds = 3600, cacheDirectory) {
+  if (!Number.isInteger(downloadTimeoutSeconds) || downloadTimeoutSeconds < 120 || downloadTimeoutSeconds > 7200) throw new Error('Invalid download timeout')
   if (!/^dsh-v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(target.tag)) throw new Error('Invalid official source tag')
   const archive = join(directory, 'official-source.tar.gz')
   await writeFile(archive, '', { flag: 'wx', mode: 0o600 })
-  await run('curl', ['--fail', '--silent', '--show-error', '--proto', '=https', '--max-time', '120', '--output', archive,
-    `https://codeload.github.com/deepseek-ai/deepseek-harness/tar.gz/refs/tags/${target.tag}`], { signal })
+  const cachedArchive = cacheDirectory && join(cacheDirectory, `${target.tag}.tar.gz`)
+  const cached = cacheDirectory && await readJson(join(cacheDirectory, `${target.tag}.json`))
+  let bytes
+  if (cached?.version === target.version && cached.tag === target.tag) {
+    try { bytes = await readFile(cachedArchive) }
+    catch (error) { if (error.code !== 'ENOENT') throw error }
+    if (bytes && createHash('sha256').update(bytes).digest('hex') !== cached.sha256) bytes = undefined
+  }
+  if (bytes) await writeFile(archive, bytes)
+  else await run('curl', ['--fail', '--silent', '--show-error', '--proto', '=https', '--connect-timeout', '20', '--max-time', String(downloadTimeoutSeconds), '--retry', '2', '--retry-max-time', String(downloadTimeoutSeconds), '--output', archive,
+    `https://codeload.github.com/deepseek-ai/deepseek-harness/tar.gz/refs/tags/${target.tag}`], { signal, timeoutMs: downloadTimeoutSeconds * 1000 + 10000 })
   const source = join(directory, 'source')
   await mkdir(source)
   await run('tar', ['-xzf', archive, '--strip-components=1', '-C', source], { signal })
   if ((await readJson(join(source, 'apps/cli/package.json')))?.version !== target.version) throw new Error('Official archive version does not match release')
+  if (cacheDirectory && !bytes) {
+    const complete = await readFile(archive)
+    await mkdir(cacheDirectory, { recursive: true, mode: 0o700 })
+    await writeFile(cachedArchive, complete, { mode: 0o600 })
+    await writeJson(join(cacheDirectory, `${target.tag}.json`), { tag: target.tag, version: target.version, sha256: createHash('sha256').update(complete).digest('hex') })
+  }
   await run('git', ['init'], { cwd: source, signal })
   await run('git', ['add', '--force', '--all'], { cwd: source, signal })
   await run('git', ['-c', 'user.name=DSH official archive', '-c', 'user.email=local@localhost', 'commit', '-m', 'Official tagged source archive'], { cwd: source, signal })
   await run('git', ['tag', target.tag], { cwd: source, signal })
 }
 /** Build and smoke-test an official tag in isolation, retaining the current environment. */
-export async function prepare({ source, home, root, target, signal, publish, run = command, verify = smoke, download = downloadSource }) {
+export async function prepare({ source, home, root, target, signal, publish, run = command, verify = smoke, download = downloadSource, downloadTimeoutSeconds = 3600 }) {
   const releaseLock = await acquireLock(root)
   const directory = join(root, 'versions', `${target.version}-${randomUUID()}`)
   let phase = 'download'
@@ -184,7 +206,7 @@ export async function prepare({ source, home, root, target, signal, publish, run
     const beforeHash = await deploymentHash(home, source, run)
     await mkdir(directory, { recursive: true, mode: 0o700 })
     await publish({ phase: 'download', target: target.version })
-    await download(target, directory, signal, run)
+    await download(target, directory, signal, run, downloadTimeoutSeconds, join(root, 'archives'))
     const staged = join(directory, 'source')
     const pkg = await readJson(join(staged, 'apps/cli/package.json'))
     if (pkg.version !== target.version) throw new Error('Tagged source version differs from release metadata')

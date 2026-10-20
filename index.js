@@ -18,6 +18,7 @@ export const Config = z.object({
   updateTimeMinutes: z.number().min(0).max(1439).step(1).default(180).volatile(),
   updateWindowMinutes: z.number().min(15).max(240).step(1).default(60).volatile(),
   checkIntervalMinutes: z.number().min(5).max(1440).default(30).volatile(),
+  downloadTimeoutSeconds: z.number().min(120).max(7200).step(1).default(3600).volatile(),
   idleQuietSeconds: z.number().min(30).max(3600).default(120).volatile(),
   autoApply: z.boolean().default(false).volatile(),
   channel: z.union(['preview', 'stable']).default('preview').volatile(),
@@ -79,7 +80,7 @@ export async function apply(ctx, config) {
     const checked = await refresh()
     validatePlan({ version: running.version, dirty: checked.dirty }, checked.latest)
     try {
-      const plan = await prepare({ source, home, root, target: checked.latest, signal: controller.signal, publish })
+      const plan = await prepare({ source, home, root, target: checked.latest, downloadTimeoutSeconds: config.downloadTimeoutSeconds.get(), signal: controller.signal, publish })
       await writeJson(join(root, 'failed-version.json'), { version: null }); return plan
     } catch (error) {
       await writeJson(join(root, 'failed-version.json'), { version: checked.latest.version }); throw error

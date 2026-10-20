@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.8
+
+- Cache complete version-checked archives with a SHA-256 checksum; reuse intact copies when preparation is retried.
+
+- Fetch official release metadata through bounded curl requests, avoiding Node fetch connection failures on this installation.
+
+- Replace the fixed 120-second archive limit with a validated, configurable download budget (default one hour), a connection deadline and bounded transient retries.
+- Show slow-download guidance and expose the download budget in advanced settings.
+
 ## 0.3.5
 
 - Download official tagged HTTPS archives instead of stalled Git clones.

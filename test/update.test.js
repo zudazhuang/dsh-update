@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, readFile, writeFile, cp, readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { selectRelease, validatePlan, prepare, buildEnvironment, command } from '../engine.js'
+import { selectRelease, checkRelease, validatePlan, prepare, buildEnvironment, command } from '../engine.js'
 import { acquireLock, readJson, writeJson } from '../store.js'
 import { transition, restoreHome } from '../supervisor.mjs'
 import { installationRoot, activity, apply } from '../index.js'
@@ -172,4 +172,14 @@ test('Host routes validate RPC input and refuse an unsupervised version switch',
     process.argv[1] = oldArg
     for (const [key, value] of Object.entries(oldEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value }
   }
+})
+
+test('official metadata uses bounded HTTPS transport and rejects invalid JSON', async () => {
+  const run = async (file, args, options) => {
+    assert.equal(file, 'curl'); assert.ok(args.includes('--compressed')); assert.equal(options.timeoutMs, 190000)
+    const value = args.at(-1).includes('api.github.com') ? [release('0.3.0')] : {versions:{'0.3.0':packageRecord('0.3.0')}}
+    await writeFile(args[args.indexOf('--output')+1], JSON.stringify(value))
+  }
+  assert.equal((await checkRelease('preview', undefined, run)).version, '0.3.0')
+  await assert.rejects(checkRelease('preview', undefined, async (file,args) => writeFile(args[args.indexOf('--output')+1], 'invalid')), SyntaxError)
 })

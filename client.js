@@ -5,7 +5,7 @@ window.__ModuleLoader__.load({ id: 'dsh-upgrade', factory: require => {
   const { createElement: h, useState, useEffect, useSyncExternalStore } = React
   const dictionaries = {
     zh: {
-      startup: '启动 Harness 时检查更新', periodic: '定时检查官方版本', time: '每天安装时段的开始时间（本机时间）', window: '安装时段长度（分钟）', nextCheck: '下次检查', nextUpdate: '下次安装时段', off: '已关闭', advanced: '高级设置与诊断',
+      downloadLimit: '下载时限（秒）', slowDownload: '慢速网络下载可能需要较长时间，超时后可重新准备。', startup: '启动 Harness 时检查更新', periodic: '定时检查官方版本', time: '每天安装时段的开始时间（本机时间）', window: '安装时段长度（分钟）', nextCheck: '下次检查', nextUpdate: '下次安装时段', off: '已关闭', advanced: '高级设置与诊断',
       title: '软件更新', updateAvailable: '有新版', check: '检查更新', retry: '重新准备更新', prepare: '下载并准备更新', apply: '安装并重启',
       running: '当前运行版本', latest: '官方发布版本', unknown: '尚未验证', source: '当前源码',
       dirty: '发现本地修改：插件会自动生成私有快照并迁移，原文件保持不变。', monitor: '监督启动已启用', unsupervised: '通过监督启动脚本重启后才能切换版本。',
@@ -15,7 +15,7 @@ window.__ModuleLoader__.load({ id: 'dsh-upgrade', factory: require => {
       last: '最近检查', transaction: '最近更新', refresh: '刷新状态', savedData: '更新保留旧环境和用户数据快照；失败后保存新增数据并恢复。',
     },
     en: {
-      startup: 'Check when Harness starts', periodic: 'Check official releases periodically', time: 'Daily installation start (local time)', window: 'Installation window (minutes)', nextCheck: 'Next check', nextUpdate: 'Next installation window', off: 'Off', advanced: 'Advanced settings and diagnostics',
+      downloadLimit: 'Download time limit (seconds)', slowDownload: 'Downloads on slow networks can take time. Retry preparation after a timeout.', startup: 'Check when Harness starts', periodic: 'Check official releases periodically', time: 'Daily installation start (local time)', window: 'Installation window (minutes)', nextCheck: 'Next check', nextUpdate: 'Next installation window', off: 'Off', advanced: 'Advanced settings and diagnostics',
       title: 'Software update', updateAvailable: 'Update available', check: 'Check for updates', retry: 'Retry preparation', prepare: 'Download and prepare update', apply: 'Install and restart',
       running: 'Running version', latest: 'Official release', unknown: 'Unverified', source: 'Running source',
       dirty: 'Local changes will be privately snapshotted and migrated without changing the original files.', monitor: 'Supervised launch enabled', unsupervised: 'Restart through the supervisor script before switching versions.',
@@ -76,7 +76,9 @@ window.__ModuleLoader__.load({ id: 'dsh-upgrade', factory: require => {
         h('p', null, state?.supervised ? t.monitor : t.unsupervised),
         state?.dirty?.length ? h('pre', { style: { whiteSpace: 'pre-wrap' } }, state.dirty.join('\n')) : null,
         h('label', null, t.channel, ' ', h('select', { value: value.channel ?? 'preview', onChange: event => save('channel', event.target.value) }, h('option', { value: 'preview' }, t.preview), h('option', { value: 'stable' }, t.stable))),
+        h('label', null, t.downloadLimit, ' ', h('input', { type: 'number', min: 120, max: 7200, step: 1, defaultValue: value.downloadTimeoutSeconds ?? 3600, onBlur: event => save('downloadTimeoutSeconds', Number(event.target.value)) })),
         h('label', null, t.quiet, ' ', h('input', { type: 'number', min: 30, max: 3600, defaultValue: value.idleQuietSeconds ?? 120, onBlur: event => save('idleQuietSeconds', Number(event.target.value)) }))),
+      state?.phase === 'download' ? h('p', { role: 'status' }, t.slowDownload) : null,
       h('p', null, t.changed), h('p', null, t.savedData),
       state?.error ? h('p', { role: 'alert' }, state.error) : null,
       connectionError ? h('p', { role: 'alert' }, connectionError) : null,
