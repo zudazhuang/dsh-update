@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.5
+
+- Download official tagged HTTPS archives instead of stalled Git clones.
+- Allow preparation retry after failure and report its phase.
+- Keep unsupervised instances from overwriting supervisor status.
+
 ## 0.3.4
 
 - Snapshot and migrate uncommitted edits and non-ignored new files automatically.

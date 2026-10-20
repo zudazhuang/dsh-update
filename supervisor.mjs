@@ -82,6 +82,11 @@ export async function main(source, home, root) {
     const file = join(root, `runtime-${randomUUID()}.log`)
     log = await open(file, 'wx', 0o600)
     const args = ['dsh', 'web', '--no-open']
+    if (process.env.DSH_SAFE_PORT !== undefined) {
+      const port = Number(process.env.DSH_SAFE_PORT)
+      if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('DSH_SAFE_PORT must be an integer from 0 to 65535')
+      args.push('--port', String(port))
+    }
     if (process.env.DSH_SAFE_TEST_PICKER === '1') args.splice(2, 0, '--patch', join(candidate, 'apps/web/tests/pin-browse-picker.overlay.yml'))
     child = spawn('pnpm', args, { cwd: candidate, env: { ...process.env, DSH_HOME: home, DSH_SAFE_UPDATE_ROOT: root, DSH_SAFE_SUPERVISOR_ID: owner }, detached: true, stdio: ['ignore', log.fd, log.fd] })
     child.once('error', () => {})

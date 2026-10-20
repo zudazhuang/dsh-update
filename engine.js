@@ -150,10 +150,32 @@ export async function migrateLocalChanges(source, staged, version, patch, run = 
   await run('git', ['-c', 'user.name=DSH local migration', '-c', 'user.email=local@localhost', 'commit', '-m', 'Preserve local installation changes'], { cwd: staged })
   return dependencyChanges
 }
+/** Download a tagged official archive over HTTPS and initialize its local migration history.
+ * @param {object} target Validated official release.
+ * @param {string} directory Private candidate directory.
+ * @param {AbortSignal} signal Cancellation signal.
+ * @param {Function} run Command runner.
+ */
+export async function downloadSource(target, directory, signal, run = command) {
+  if (!/^dsh-v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(target.tag)) throw new Error('Invalid official source tag')
+  const archive = join(directory, 'official-source.tar.gz')
+  await writeFile(archive, '', { flag: 'wx', mode: 0o600 })
+  await run('curl', ['--fail', '--silent', '--show-error', '--proto', '=https', '--max-time', '120', '--output', archive,
+    `https://codeload.github.com/deepseek-ai/deepseek-harness/tar.gz/refs/tags/${target.tag}`], { signal })
+  const source = join(directory, 'source')
+  await mkdir(source)
+  await run('tar', ['-xzf', archive, '--strip-components=1', '-C', source], { signal })
+  if ((await readJson(join(source, 'apps/cli/package.json')))?.version !== target.version) throw new Error('Official archive version does not match release')
+  await run('git', ['init'], { cwd: source, signal })
+  await run('git', ['add', '--force', '--all'], { cwd: source, signal })
+  await run('git', ['-c', 'user.name=DSH official archive', '-c', 'user.email=local@localhost', 'commit', '-m', 'Official tagged source archive'], { cwd: source, signal })
+  await run('git', ['tag', target.tag], { cwd: source, signal })
+}
 /** Build and smoke-test an official tag in isolation, retaining the current environment. */
-export async function prepare({ source, home, root, target, signal, publish, run = command, verify = smoke }) {
+export async function prepare({ source, home, root, target, signal, publish, run = command, verify = smoke, download = downloadSource }) {
   const releaseLock = await acquireLock(root)
   const directory = join(root, 'versions', `${target.version}-${randomUUID()}`)
+  let phase = 'download'
   const smokeHome = join(directory, '.smoke-home')
   try {
     const current = await sourceStatus(source, run)
@@ -162,12 +184,13 @@ export async function prepare({ source, home, root, target, signal, publish, run
     const beforeHash = await deploymentHash(home, source, run)
     await mkdir(directory, { recursive: true, mode: 0o700 })
     await publish({ phase: 'download', target: target.version })
-    await run('git', ['clone', '--depth', '1', '--branch', target.tag, '--single-branch', OFFICIAL_REPO, join(directory, 'source')], { signal })
+    await download(target, directory, signal, run)
     const staged = join(directory, 'source')
     const pkg = await readJson(join(staged, 'apps/cli/package.json'))
     if (pkg.version !== target.version) throw new Error('Tagged source version differs from release metadata')
     const dependencyChanges = await migrateLocalChanges(source, staged, current.version, join(directory, 'local-changes.patch'), run)
     if ((await readJson(join(staged, 'apps/cli/package.json'))).version !== target.version) throw new Error('Local changes altered the candidate version')
+    phase = 'build'
     await publish({ phase: 'build', target: target.version })
     await run('pnpm', ['install', dependencyChanges ? '--no-frozen-lockfile' : '--frozen-lockfile'], { cwd: staged, signal })
     if (dependencyChanges) await run('git', ['-c', 'user.name=DSH local migration', '-c', 'user.email=local@localhost', 'commit', '--allow-empty', '-am', 'Resolve migrated dependency lockfile'], { cwd: staged })
@@ -177,6 +200,7 @@ export async function prepare({ source, home, root, target, signal, publish, run
     for (const name of Object.keys(profile.dependencies ?? {}).filter(name => name.startsWith('@deepseek-ai/dsh-'))) {
       await run(process.execPath, ['--import', 'tsx/esm', join(staged, 'apps/cli/src/bin.ts'), 'plugin', '--profile', 'web', 'add', `${name}@${target.version}`], { cwd: staged, env: { ...buildEnvironment(), DSH_HOME: smokeHome }, signal })
     }
+    phase = 'verify'
     await publish({ phase: 'verify', target: target.version })
     await verify(staged, smokeHome, 90000, signal)
     if (beforeHash !== await deploymentHash(home, source, run)) throw new Error('Configuration changed during preparation; prepare again')
@@ -185,7 +209,7 @@ export async function prepare({ source, home, root, target, signal, publish, run
     await publish({ phase: 'prepared', target: target.version })
     return plan
   } catch (error) {
-    await publish({ phase: 'failed', target: target.version, error: error.message })
+    await publish({ phase: 'failed', target: target.version, error: `${phase}: ${error.message}` })
     throw error
   } finally { await releaseLock() }
 }

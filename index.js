@@ -57,7 +57,7 @@ export async function apply(ctx, config) {
   let held; releaseClaims = () => {}
   const publish = async update => {
     state = { ...state, ...update }
-    if (!process.env.DSH_SAFE_SMOKE) await writeJson(join(root, 'status.json'), state)
+    if (!process.env.DSH_SAFE_SMOKE && state.supervised) await writeJson(join(root, 'status.json'), state)
   }
   const refresh = async () => {
     await publish({ phase: 'checking', error: null, latest: null })

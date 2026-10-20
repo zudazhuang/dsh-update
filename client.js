@@ -6,7 +6,7 @@ window.__ModuleLoader__.load({ id: 'dsh-upgrade', factory: require => {
   const dictionaries = {
     zh: {
       startup: '启动 Harness 时检查更新', periodic: '定时检查官方版本', time: '每天安装时段的开始时间（本机时间）', window: '安装时段长度（分钟）', nextCheck: '下次检查', nextUpdate: '下次安装时段', off: '已关闭', advanced: '高级设置与诊断',
-      title: '软件更新', updateAvailable: '有新版', check: '检查更新', prepare: '下载并准备更新', apply: '安装并重启',
+      title: '软件更新', updateAvailable: '有新版', check: '检查更新', retry: '重新准备更新', prepare: '下载并准备更新', apply: '安装并重启',
       running: '当前运行版本', latest: '官方发布版本', unknown: '尚未验证', source: '当前源码',
       dirty: '发现本地修改：插件会自动生成私有快照并迁移，原文件保持不变。', monitor: '监督启动已启用', unsupervised: '通过监督启动脚本重启后才能切换版本。',
       interval: '检查间隔（分钟）', quiet: '空闲等待（秒）', automatic: '在指定时段自动安装更新', channel: '发布渠道', preview: '包含候选版本', stable: '仅稳定版本',
@@ -16,7 +16,7 @@ window.__ModuleLoader__.load({ id: 'dsh-upgrade', factory: require => {
     },
     en: {
       startup: 'Check when Harness starts', periodic: 'Check official releases periodically', time: 'Daily installation start (local time)', window: 'Installation window (minutes)', nextCheck: 'Next check', nextUpdate: 'Next installation window', off: 'Off', advanced: 'Advanced settings and diagnostics',
-      title: 'Software update', updateAvailable: 'Update available', check: 'Check for updates', prepare: 'Download and prepare update', apply: 'Install and restart',
+      title: 'Software update', updateAvailable: 'Update available', check: 'Check for updates', retry: 'Retry preparation', prepare: 'Download and prepare update', apply: 'Install and restart',
       running: 'Running version', latest: 'Official release', unknown: 'Unverified', source: 'Running source',
       dirty: 'Local changes will be privately snapshotted and migrated without changing the original files.', monitor: 'Supervised launch enabled', unsupervised: 'Restart through the supervisor script before switching versions.',
       interval: 'Check interval (minutes)', quiet: 'Idle wait (seconds)', automatic: 'Automatically install during the scheduled window', channel: 'Release channel', preview: 'Include preview releases', stable: 'Stable releases only',
@@ -60,7 +60,7 @@ window.__ModuleLoader__.load({ id: 'dsh-upgrade', factory: require => {
       state?.latest?.url ? h('a', { href: state.latest.url, target: '_blank', rel: 'noreferrer' }, state.latest.tag) : null,
       h('div', { className: 'dsh-safe-update-actions' },
         h(Button, { variant: 'primary', disabled: busy || state?.phase === 'checking', onClick: () => invoke('check') }, t.check),
-        h(Button, { variant: 'outline', disabled: busy || state?.phase !== 'available', onClick: () => invoke('prepare') }, t.prepare),
+        h(Button, { variant: 'outline', disabled: busy || !['available', 'failed'].includes(state?.phase), onClick: () => invoke('prepare') }, state?.phase === 'failed' ? t.retry : t.prepare),
         h(Button, { variant: 'outline', disabled: busy || state?.phase !== 'prepared' || !state?.supervised, onClick: () => invoke('apply') }, t.apply)),
       h('label', null, h(Switch, { checked: value.checkOnStart ?? true, label: t.startup, onChange: checked => save('checkOnStart', checked) }), t.startup),
       h('label', null, h(Switch, { checked: value.scheduledChecks ?? true, label: t.periodic, onChange: checked => save('scheduledChecks', checked) }), t.periodic),

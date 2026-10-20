@@ -11,6 +11,7 @@ import { installationRoot, activity, apply } from '../index.js'
 
 const release = version => ({ tag_name: `dsh-v${version}`, html_url: `https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v${version}`, prerelease: version.includes('-'), draft: false })
 const packageRecord = version => ({ name: '@deepseek-ai/dsh', version, dist: { integrity: `sha512-${'A'.repeat(86)}==` } })
+const fixtureDownload = (target, directory, signal, run) => run('git', ['clone', 'https://github.com:443/deepseek-ai/deepseek-harness.git', join(directory, 'source')], { signal })
 const target = { version: '0.3.0', tag: 'dsh-v0.3.0' }
 async function temporary(t) {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-safe-test-'))
@@ -66,7 +67,7 @@ test('failed build leaves current code, dependencies and user data untouched', a
     if (file === 'pnpm' && args.includes('build')) throw new Error('fixture build failure')
     return ''
   }
-  await assert.rejects(prepare({ ...paths, target, signal: new AbortController().signal, run, publish: async value => phases.push(value.phase) }), /fixture build failure/)
+  await assert.rejects(prepare({ download: fixtureDownload, ...paths, target, signal: new AbortController().signal, run, publish: async value => phases.push(value.phase) }), /fixture build failure/)
   assert.deepEqual(phases, ['download', 'build', 'failed'])
   assert.equal(await readFile(join(paths.source, 'old-built-file'), 'utf8'), 'previous build')
   assert.equal(await readFile(join(paths.home, 'credentials'), 'utf8'), 'test fixture secret')
@@ -84,7 +85,7 @@ test('verified preparation persists a plan only after isolated boot succeeds', a
     }
     return ''
   }
-  const plan = await prepare({ ...paths, target, signal: new AbortController().signal, run, publish: async () => {}, verify: async (source, home) => {
+  const plan = await prepare({ download: fixtureDownload, ...paths, target, signal: new AbortController().signal, run, publish: async () => {}, verify: async (source, home) => {
     assert.notEqual(source, paths.source); assert.notEqual(home, paths.home)
     assert.equal(await readFile(join(home, 'credentials'), 'utf8'), 'test fixture secret'); verified = true
   } })
