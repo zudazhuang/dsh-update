@@ -1,7 +1,7 @@
 {
   "name": "dsh-update-safe",
   "version": "0.4.1",
-  "description": "Official release checks and isolated, supervised source updates for DeepSeek Harness",
+  "description": "DeepSeek Harness 源码安装的更新插件：官方版本检查、隔离构建、试启动健康检查、监督切换与失败回滚（supervised source update with rollback）",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -64,10 +64,19 @@
     "url": "https://github.com/zudazhuang/dsh-update-safe/issues"
   },
   "keywords": [
-    "dsh-plugin",
-    "deepseek-harness",
     "dsh",
-    "updater"
+    "dsh-plugin",
+    "dsh-update",
+    "dsh-update-safe",
+    "deepseek-harness",
+    "deepseek-harness-update",
+    "updater",
+    "self-update",
+    "rollback",
+    "supervisor",
+    "更新",
+    "更新插件",
+    "源码安装"
   ],
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
