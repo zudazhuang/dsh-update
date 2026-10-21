@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Rename the package, repository and bundle row to `dsh-update-plugin`; the npm name `dsh-upgrade` belongs to another author's plugin.
+- Keep the `safe-release-update` configuration id, RPC routes, supervisor lock and update data directory, so settings and update records survive the rename.
+- Point installation instructions at the pinned release asset URL instead of a local tarball path.
+
 ## 0.3.8
 
 - Cache complete version-checked archives with a SHA-256 checksum; reuse intact copies when preparation is retried.

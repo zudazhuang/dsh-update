@@ -1,6 +1,6 @@
 - insert:
     - id: safe-release-update
-      name: dsh-upgrade
+      name: dsh-update-plugin
       config:
         checkOnStart: true
         scheduledChecks: true
