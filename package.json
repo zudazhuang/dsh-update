@@ -1,6 +1,6 @@
 {
-  "name": "dsh-update-plugin",
-  "version": "0.4.0",
+  "name": "dsh-update-safe",
+  "version": "0.4.1",
   "description": "Official release checks and isolated, supervised source updates for DeepSeek Harness",
   "type": "module",
   "main": "index.js",
@@ -57,11 +57,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zudazhuang/dsh-update-plugin.git"
+    "url": "https://github.com/zudazhuang/dsh-update-safe.git"
   },
-  "homepage": "https://github.com/zudazhuang/dsh-update-plugin#readme",
+  "homepage": "https://github.com/zudazhuang/dsh-update-safe#readme",
   "bugs": {
-    "url": "https://github.com/zudazhuang/dsh-update-plugin/issues"
+    "url": "https://github.com/zudazhuang/dsh-update-safe/issues"
   },
   "keywords": [
     "dsh-plugin",

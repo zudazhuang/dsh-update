@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- Rename the package, repository and bundle row again, to `dsh-update-safe`: the npm name `dsh-update-plugin` is an unowned stub with no versions, while `dsh-update-safe` is free.
+- 0.4.0 was published on GitHub only; npm never had a version of this plugin.
+- Keep the `safe-release-update` configuration id, RPC routes, supervisor lock and update data directory.
+
 ## 0.4.0
 
 - Rename the package, repository and bundle row to `dsh-update-plugin`; the npm name `dsh-upgrade` belongs to another author's plugin.
