@@ -4,9 +4,15 @@ DeepSeek Harness 源码安装的官方版本检查和安全更新插件。适配
 
 ## 使用
 
-社区插件，非 DeepSeek 官方产品。通过 GitHub Releases 分发；npm 上的 `dsh-upgrade` 是另一位作者的另一个插件，本包 0.4.0 曾名 `dsh-update-plugin`，0.4.1 起统一为 `dsh-update-safe`，避免装错。支持 Harness 源码 Web 安装；当前在 0.2.1-alpha.1 验证，适配 ConfigForms 设置接口。需要 Node.js ^22.19 或 >=24、pnpm、Git；Mac 登录自动启动还需 Python 3。
+社区插件，非 DeepSeek 官方产品。发布在 GitHub Releases 和 npm（`dsh-update-safe`）；npm 上的 `dsh-upgrade` 是另一位作者的另一个插件，本包 0.4.0 曾名 `dsh-update-plugin`，0.4.1 起统一为 `dsh-update-safe`，避免装错。支持 Harness 源码 Web 安装；当前在 0.2.1-alpha.1 验证，适配 ConfigForms 设置接口。需要 Node.js ^22.19 或 >=24、pnpm、Git；Mac 登录自动启动还需 Python 3。
 
-在 Harness 源码目录用当前版本的固定地址安装；profile 记录的是该 URL，换机或清理下载目录都不影响：
+在 Harness 源码目录从 npm 安装，版本固定，依赖走 registry（国内可配 npmmirror 镜像）：
+
+```sh
+pnpm dsh plugin --profile web add dsh-update-safe@0.4.1
+```
+
+也可以直接用 Release 附件的固定地址；profile 记录的是该 URL，换机或清理下载目录都不影响：
 
 ```sh
 pnpm dsh plugin --profile web add https://github.com/zudazhuang/dsh-update-safe/releases/download/v0.4.1/dsh-update-safe-0.4.1.tgz
@@ -60,7 +66,7 @@ DSH_SOURCE=/path/to/deepseek-harness ./start-harness.sh
 
 ## 社区发布
 
-仓库添加 `dsh-plugin`、`deepseek-harness` 和 `dsh` topics；GitHub 主题页按标签收录，索引可能延迟。版本固定的安装包发布在 GitHub Releases；npm 上的 `dsh-upgrade` 属于另一位作者，本包自 0.4.1 起使用 `dsh-update-safe`，安装以 Release 附件地址为准，不要用 `dsh plugin add dsh-upgrade`。GitHub topic 收录也不代表官方审核或兼容性认证。
+仓库添加 `dsh-plugin`、`deepseek-harness` 和 `dsh` topics；GitHub 主题页按标签收录，索引可能延迟。版本固定的安装包同时发布在 GitHub Releases 和 npm，两者内容一致；npm 上的 `dsh-upgrade` 属于另一位作者，本包自 0.4.1 起使用 `dsh-update-safe`，不要用 `dsh plugin add dsh-upgrade`。GitHub topic 收录也不代表官方审核或兼容性认证。
 
 本地工作文件会从当前官方版本标签生成私有补丁，并在独立候选目录中三方迁移。存在冲突时停止更新，原环境不变；需先人工解决冲突。准备结束及切换前重新核对全部工作文件，内容变化会使候选失效。不要将私人安装提交推送到公共仓库。
 
