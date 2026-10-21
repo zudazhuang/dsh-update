@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2
+
+- Describe the plugin by what it does: source-install updates with isolated builds, a health-checked switch and rollback.
+- Write the package description in Chinese and expand the npm keywords with English and Chinese terms.
+- Drop historical and migration notes from the README; this changelog keeps the record.
+
 ## 0.4.1
 
 - Rename the package, repository and bundle row again, to `dsh-update-safe`: the npm name `dsh-update-plugin` is an unowned stub with no versions, while `dsh-update-safe` is free.

@@ -1,6 +1,6 @@
 {
   "name": "dsh-update-safe",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "DeepSeek Harness 源码安装的更新插件：官方版本检查、隔离构建、试启动健康检查、监督切换与失败回滚（supervised source update with rollback）",
   "type": "module",
   "main": "index.js",

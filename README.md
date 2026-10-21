@@ -20,16 +20,16 @@ DeepSeek Harness **源码安装**的更新插件。它把一次更新拆成可�
 在 Harness 源码目录从 npm 安装，版本固定，依赖走 registry（国内可配 npmmirror 镜像）：
 
 ```sh
-pnpm dsh plugin --profile web add dsh-update-safe@0.4.1
+pnpm dsh plugin --profile web add dsh-update-safe@0.4.2
 ```
 
 也可以直接用 Release 附件的固定地址；profile 记录的是该 URL，换机或清理下载目录都不影响：
 
 ```sh
-pnpm dsh plugin --profile web add https://github.com/zudazhuang/dsh-update-safe/releases/download/v0.4.1/dsh-update-safe-0.4.1.tgz
+pnpm dsh plugin --profile web add https://github.com/zudazhuang/dsh-update-safe/releases/download/v0.4.2/dsh-update-safe-0.4.2.tgz
 ```
 
-也可从 [Releases](https://github.com/zudazhuang/dsh-update-safe/releases/latest) 下载 `dsh-update-safe-0.4.1.tgz` 后运行 `pnpm dsh plugin --profile web add /absolute/path/dsh-update-safe-0.4.1.tgz`；这种本地路径形式会写进 profile，移动或删除该文件后重装会失败，优先用上面的 URL。安装后重启 Harness，侧栏底部出现更新入口，插件详情页名为 dsh-update-safe。
+也可从 [Releases](https://github.com/zudazhuang/dsh-update-safe/releases/latest) 下载 `dsh-update-safe-0.4.2.tgz` 后运行 `pnpm dsh plugin --profile web add /absolute/path/dsh-update-safe-0.4.2.tgz`；这种本地路径形式会写进 profile，移动或删除该文件后重装会失败，优先用上面的 URL。安装后重启 Harness，侧栏底部出现更新入口，插件详情页名为 dsh-update-safe。
 
 开发者也可克隆本仓库，运行 `npm ci`、`npm test`、`npm pack` 后安装生成的包。插件 → dsh-update-safe 提供检查、隔离构建、切换操作和检查间隔、渠道、空闲时长、自动切换配置。自动切换默认关闭；未使用监督启动时，自动安装暂停；页面允许保存自动安装偏好，满足条件后只在指定时段执行。
 
