@@ -4,13 +4,15 @@ DeepSeek Harness 源码安装的官方版本检查和安全更新插件。适配
 
 ## 使用
 
-社区插件，非 DeepSeek 官方产品。支持 Harness 源码 Web 安装；当前在 0.2.1-alpha.1 验证，适配 ConfigForms 设置接口。需要 Node.js ^22.19 或 >=24、pnpm、Git；Mac 登录自动启动还需 Python 3。
+社区插件，非 DeepSeek 官方产品。仅通过 GitHub Releases 分发；npm 上的 `dsh-upgrade` 属于另一位作者，不是本插件，不要按 registry 名称安装。支持 Harness 源码 Web 安装；当前在 0.2.1-alpha.1 验证，适配 ConfigForms 设置接口。需要 Node.js ^22.19 或 >=24、pnpm、Git；Mac 登录自动启动还需 Python 3。
 
-从 [Releases](https://github.com/zudazhuang/dsh-upgrade/releases) 下载版本固定的 `dsh-upgrade-0.3.5.tgz`，在 Harness 源码目录运行：
+在 Harness 源码目录用当前版本的固定地址安装；profile 记录的是该 URL，换机或清理下载目录都不影响：
 
 ```sh
-pnpm dsh plugin --profile web add /absolute/path/dsh-upgrade-0.3.5.tgz
+pnpm dsh plugin --profile web add https://github.com/zudazhuang/dsh-upgrade/releases/download/v0.3.8/dsh-upgrade-0.3.8.tgz
 ```
+
+也可从 [Releases](https://github.com/zudazhuang/dsh-upgrade/releases/latest) 下载 `dsh-upgrade-0.3.8.tgz` 后运行 `pnpm dsh plugin --profile web add /absolute/path/dsh-upgrade-0.3.8.tgz`；这种本地路径形式会写进 profile，移动或删除该文件后重装会失败，优先用上面的 URL。安装后重启 Harness，侧栏底部出现更新入口，插件详情页名为 dsh-upgrade。
 
 开发者也可克隆本仓库，运行 `npm ci`、`npm test`、`npm pack` 后安装生成的包。插件 → dsh-upgrade 提供检查、隔离构建、切换操作和检查间隔、渠道、空闲时长、自动切换配置。自动切换默认关闭；未使用监督启动时，自动安装暂停；页面允许保存自动安装偏好，满足条件后只在指定时段执行。
 
@@ -56,7 +58,7 @@ DSH_SOURCE=/path/to/deepseek-harness ./start-harness.sh
 
 ## 社区发布
 
-仓库添加 `dsh-plugin`、`deepseek-harness` 和 `dsh` topics；GitHub 主题页按标签收录，索引可能延迟。版本固定的安装包发布在 GitHub Releases。npm 发布尚待完成账号登录；当前通过 GitHub Release 安装。GitHub topic 收录也不代表官方审核或兼容性认证。
+仓库添加 `dsh-plugin`、`deepseek-harness` 和 `dsh` topics；GitHub 主题页按标签收录，索引可能延迟。版本固定的安装包发布在 GitHub Releases，Release 附件是唯一分发渠道：npm 上的 `dsh-upgrade` 已被另一位作者占用，本包无法用同名发布，因此不要用 `dsh plugin add dsh-upgrade` 安装。GitHub topic 收录也不代表官方审核或兼容性认证。
 
 本地工作文件会从当前官方版本标签生成私有补丁，并在独立候选目录中三方迁移。存在冲突时停止更新，原环境不变；需先人工解决冲突。准备结束及切换前重新核对全部工作文件，内容变化会使候选失效。不要将私人安装提交推送到公共仓库。
 
