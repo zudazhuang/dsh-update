@@ -13,16 +13,6 @@ DeepSeek Harness **源码安装**的更新插件。它把一次更新拆成可�
 - 切换前为未提交改动生成私有快照；切换后启动失败则恢复一致性快照和原环境
 - 侧栏底部更新入口与新版提示；插件详情页可配置检查间隔、渠道、空闲时长
 
-<!-- 截图就位后取消注释；图片放 docs/images/，文件名见该目录的 README。
-## 截图
-
-![侧栏更新入口](docs/images/update-safe-sidebar.png)
-![插件详情页](docs/images/update-safe-overview.png)
-![准备阶段](docs/images/update-safe-prepare.png)
-![设置页](docs/images/update-safe-settings.png)
-![失败回滚](docs/images/update-safe-rollback.png)
--->
-
 ## 使用
 
 社区插件，非 DeepSeek 官方产品。发布在 GitHub Releases 和 npm（`dsh-update-safe`）。支持 Harness 源码 Web 安装；当前在 0.2.1-alpha.1 验证，适配 ConfigForms 设置接口。需要 Node.js ^22.19 或 >=24、pnpm、Git；Mac 登录自动启动还需 Python 3。
